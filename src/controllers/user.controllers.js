@@ -3,6 +3,8 @@ import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
+import path from "path";
+
 
 const registerUser = asyncHandler(async(req,res) => {
     //  get user details from frontend
@@ -15,22 +17,28 @@ const registerUser = asyncHandler(async(req,res) => {
     //  check for user creation
     //  return res
 
-    const {fullname, email, username, password} = req.body
+    const {fullName, email, username, password} = req.body
+    console.log("fullName: ",fullName);
     console.log("email: ",email);
+    console.log("username:" ,username);
+    console.log("password:",password);
 
     if(
-        [fullname, email, username, password].some((field) => field?.trim() === "")
+        [fullName, email, username, password].some((field) => field?.trim() === "")
     ){
         throw new ApiError(400,"All fields are required")
     }
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or:    [{username},{email}]
     })
     if(existedUser){
         throw new ApiError(409,"User with email or username already exists")
     }
-    const avtarLocalPath = req.files?.avtar[0]?.path
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    //test
+    console.log("Files received:", req.files);
+
+    const avtarLocalPath = path.resolve(req.files?.avtar[0]?.path)
+    const coverImageLocalPath = path.resolve(req.files?.coverImage[0]?.path)
 
     if(!avtarLocalPath){
         throw new ApiError(400,"Avtar file is required")
@@ -44,11 +52,12 @@ const registerUser = asyncHandler(async(req,res) => {
     }
 
      const user = await User.create({
-        fullname,
+        fullName,
         avtar:  avtar.url,
         coverImage: coverImage?.url || "",
         email,
-        username:   username.toLowercase()
+        username:   username.toLowerCase(),
+        password
     })
 
     const createdUser = await User.findById(user._id).select(
